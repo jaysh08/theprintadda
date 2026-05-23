@@ -109,7 +109,7 @@ export default function PickupInfo() {
             </div>
             <div className="h-px md:h-12 w-px bg-white/20" />
             <a
-              href="https://wa.me/91XXXXXXXXXX"
+              href="https://wa.me/917039514368"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 bg-neon-green text-dark-900 font-bold rounded-full hover:scale-105 transition-transform"

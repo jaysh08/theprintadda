@@ -14,7 +14,12 @@ import {
   MapPin,
   Clock,
   Truck,
-  Share2
+  Share2,
+  Move,
+  ZoomIn,
+  ZoomOut,
+  RefreshCw,
+  Shirt
 } from "lucide-react";
 
 interface Product {
@@ -44,6 +49,8 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const [showPrint, setShowPrint] = useState(true);
   const [selectedSize, setSelectedSize] = useState("M");
   const [uploadedDesign, setUploadedDesign] = useState<string | null>(null);
+  const [designPosition, setDesignPosition] = useState({ x: 50, y: 40 });
+  const [designScale, setDesignScale] = useState(100);
 
   const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -53,10 +60,15 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       `📦 Product: ${product.name}\n` +
       `💰 Price: ₹${product.price}\n` +
       `📏 Size: ${selectedSize}\n` +
-      `${product.isCustomizable && uploadedDesign ? "🎨 Custom design attached" : ""}\n\n` +
+      `${product.isCustomizable && uploadedDesign ? "🎨 Custom design attached (Position: " + designPosition.x + "%," + designPosition.y + "%, Size: " + designScale + "%)\n" : ""}\n\n` +
       `Please confirm availability.`
     );
-    window.open(`https://wa.me/91XXXXXXXXXX?text=${message}`, "_blank");
+    window.open(`https://wa.me/917039514368?text=${message}`, "_blank");
+  };
+
+  const resetDesignPosition = () => {
+    setDesignPosition({ x: 50, y: 40 });
+    setDesignScale(100);
   };
 
   const handleShare = async () => {
@@ -267,26 +279,84 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                 )}
               </div>
 
-              {/* Uploaded Design Preview */}
+              {/* Uploaded Design Preview with Position Controls */}
               {uploadedDesign && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="mb-8 p-4 glass rounded-xl"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-dark-600">
-                      <img src={uploadedDesign} alt="Your design" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-medium">Design uploaded!</p>
-                      <p className="text-white/50 text-sm">Will be included in your reservation</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-dark-600">
+                        <img src={uploadedDesign} alt="Your design" className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">Design uploaded!</p>
+                        <p className="text-white/50 text-sm">Position it on the t-shirt</p>
+                      </div>
                     </div>
                     <button
                       onClick={() => setUploadedDesign(null)}
                       className="p-2 text-white/40 hover:text-white transition-colors"
                     >
                       ✕
+                    </button>
+                  </div>
+                  
+                  {/* Mini T-Shirt Preview */}
+                  <div className="relative w-full max-w-xs mx-auto aspect-[3/4] rounded-xl overflow-hidden bg-gradient-to-b from-dark-600 to-dark-700 border border-white/10 mb-4">
+                    <svg viewBox="0 0 200 250" className="absolute inset-0 w-full h-full">
+                      <path d="M40,50 L20,70 L20,100 L40,90 L40,240 L160,240 L160,90 L180,100 L180,70 L160,50 L130,30 Q100,10 70,30 Z" fill="#1a1a1a" stroke="#333" strokeWidth="1"/>
+                      <path d="M70,30 Q100,50 130,30" fill="none" stroke="#333" strokeWidth="2"/>
+                    </svg>
+                    <div 
+                      className="absolute"
+                      style={{
+                        left: `${designPosition.x}%`,
+                        top: `${designPosition.y}%`,
+                        transform: `translate(-50%, -50%) scale(${designScale / 100})`,
+                        width: '40%',
+                        aspectRatio: '1',
+                      }}
+                    >
+                      <img src={uploadedDesign} alt="Design" className="w-full h-full object-contain drop-shadow-lg pointer-events-none" draggable={false}/>
+                    </div>
+                  </div>
+                  
+                  {/* Position Controls */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-white/40 text-xs mb-1 flex items-center gap-1">
+                        <Move className="w-3 h-3" />
+                        Position (X: {designPosition.x}%, Y: {designPosition.y}%)
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-white/30 text-xs">Horizontal</span>
+                          <input type="range" min="10" max="90" value={designPosition.x} onChange={(e) => setDesignPosition({ ...designPosition, x: parseInt(e.target.value) })} className="w-full accent-neon-cyan"/>
+                        </div>
+                        <div>
+                          <span className="text-white/30 text-xs">Vertical</span>
+                          <input type="range" min="10" max="80" value={designPosition.y} onChange={(e) => setDesignPosition({ ...designPosition, y: parseInt(e.target.value) })} className="w-full accent-neon-cyan"/>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-white/40 text-xs mb-1 flex items-center gap-1">
+                        <ZoomIn className="w-3 h-3" />
+                        Size ({designScale}%)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <ZoomOut className="w-4 h-4 text-white/30"/>
+                        <input type="range" min="30" max="150" value={designScale} onChange={(e) => setDesignScale(parseInt(e.target.value))} className="flex-1 accent-neon-cyan"/>
+                        <ZoomIn className="w-4 h-4 text-white/30"/>
+                      </div>
+                    </div>
+                    
+                    <button onClick={resetDesignPosition} className="w-full py-1.5 bg-dark-600 hover:bg-dark-500 text-white/50 hover:text-white rounded-lg flex items-center justify-center gap-2 text-xs transition-colors">
+                      <RefreshCw className="w-3 h-3"/> Reset
                     </button>
                   </div>
                 </motion.div>

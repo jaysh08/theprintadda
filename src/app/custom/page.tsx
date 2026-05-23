@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { motion } from "framer-motion";
-import { Upload, Image, File, X, CheckCircle, MessageCircle, Info } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Upload, Image, File, X, CheckCircle, MessageCircle, Info, Move, ZoomIn, ZoomOut, RefreshCw, Shirt } from "lucide-react";
 
 type Step = "upload" | "details" | "confirm";
 
@@ -15,6 +15,11 @@ export default function CustomPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Mockup controls
+  const [showMockup, setShowMockup] = useState(true);
+  const [designPosition, setDesignPosition] = useState({ x: 50, y: 40 });
+  const [designScale, setDesignScale] = useState(100);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (selectedFile: File) => {
@@ -50,9 +55,16 @@ export default function CustomPage() {
       `📱 Phone: ${phone}\n` +
       `${email ? `📧 Email: ${email}\n` : ""}` +
       `${message ? `💬 Message: ${message}\n` : ""}` +
-      `📎 File: ${file?.name || "See attached"}`
+      `📎 File: ${file?.name || "See attached"}\n` +
+      `🎯 Design Position: ${designPosition.x}% horizontal, ${designPosition.y}% vertical\n` +
+      `📐 Design Scale: ${designScale}%`
     );
-    window.open(`https://wa.me/91XXXXXXXXXX?text=${text}`, "_blank");
+    window.open(`https://wa.me/917039514368?text=${text}`, "_blank");
+  };
+
+  const resetDesignPosition = () => {
+    setDesignPosition({ x: 50, y: 40 });
+    setDesignScale(100);
   };
 
   return (
@@ -164,12 +176,140 @@ export default function CustomPage() {
                 )}
               </div>
 
-              {/* Preview */}
+              {/* Mockup Preview with Design Position */}
               {preview && (
                 <div className="mt-8">
-                  <h4 className="text-white font-medium mb-4">Preview</h4>
-                  <div className="relative w-full max-w-xs aspect-square rounded-xl overflow-hidden bg-dark-700 mx-auto">
-                    <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-white font-medium flex items-center gap-2">
+                      <Shirt className="w-5 h-5 text-neon-cyan" />
+                      Live Preview
+                    </h4>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowMockup(!showMockup)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          showMockup 
+                            ? "bg-neon-cyan text-dark-900" 
+                            : "bg-dark-600 text-white/60"
+                        }`}
+                      >
+                        {showMockup ? "Design on Shirt" : "Plain Shirt"}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* T-Shirt Mockup */}
+                  <div className="relative w-full max-w-sm mx-auto aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-b from-dark-600 to-dark-700 border border-white/10">
+                    {/* T-Shirt SVG */}
+                    <svg viewBox="0 0 200 250" className="absolute inset-0 w-full h-full">
+                      {/* T-shirt shape */}
+                      <path 
+                        d="M40,50 L20,70 L20,100 L40,90 L40,240 L160,240 L160,90 L180,100 L180,70 L160,50 L130,30 Q100,10 70,30 Z" 
+                        fill="#1a1a1a" 
+                        stroke="#333" 
+                        strokeWidth="1"
+                      />
+                      {/* Collar */}
+                      <path 
+                        d="M70,30 Q100,50 130,30" 
+                        fill="none" 
+                        stroke="#333" 
+                        strokeWidth="2"
+                      />
+                    </svg>
+                    
+                    {/* Design Overlay */}
+                    {preview && showMockup && (
+                      <div 
+                        className="absolute cursor-move"
+                        style={{
+                          left: `${designPosition.x}%`,
+                          top: `${designPosition.y}%`,
+                          transform: `translate(-50%, -50%) scale(${designScale / 100})`,
+                          width: '40%',
+                          height: 'auto',
+                          aspectRatio: '1',
+                        }}
+                      >
+                        <img 
+                          src={preview} 
+                          alt="Design" 
+                          className="w-full h-full object-contain drop-shadow-lg pointer-events-none"
+                          draggable={false}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Plain t-shirt mode - show upload indicator */}
+                    {preview && !showMockup && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center text-white/30">
+                          <Shirt className="w-16 h-16 mx-auto mb-2 opacity-50" />
+                          <span className="text-sm">Plain View</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Design Position Controls */}
+                  <div className="mt-6 space-y-4">
+                    <div>
+                      <label className="text-white/60 text-sm mb-2 flex items-center gap-2">
+                        <Move className="w-4 h-4" />
+                        Position (X: {designPosition.x}%, Y: {designPosition.y}%)
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-white/40 text-xs">Horizontal</span>
+                          <input
+                            type="range"
+                            min="10"
+                            max="90"
+                            value={designPosition.x}
+                            onChange={(e) => setDesignPosition({ ...designPosition, x: parseInt(e.target.value) })}
+                            className="w-full accent-neon-cyan"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-white/40 text-xs">Vertical</span>
+                          <input
+                            type="range"
+                            min="10"
+                            max="80"
+                            value={designPosition.y}
+                            onChange={(e) => setDesignPosition({ ...designPosition, y: parseInt(e.target.value) })}
+                            className="w-full accent-neon-cyan"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-white/60 text-sm mb-2 flex items-center gap-2">
+                        <ZoomIn className="w-4 h-4" />
+                        Size ({designScale}%)
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <ZoomOut className="w-5 h-5 text-white/40" />
+                        <input
+                          type="range"
+                          min="30"
+                          max="150"
+                          value={designScale}
+                          onChange={(e) => setDesignScale(parseInt(e.target.value))}
+                          className="flex-1 accent-neon-cyan"
+                        />
+                        <ZoomIn className="w-5 h-5 text-white/40" />
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={resetDesignPosition}
+                      className="w-full py-2 bg-dark-600 hover:bg-dark-500 text-white/60 hover:text-white rounded-lg flex items-center justify-center gap-2 text-sm transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Reset Position
+                    </button>
                   </div>
                 </div>
               )}
@@ -284,6 +424,14 @@ export default function CustomPage() {
                 <div className="flex justify-between py-3 border-b border-white/10">
                   <span className="text-white/60">File</span>
                   <span className="text-white font-medium">{file?.name}</span>
+                </div>
+                <div className="flex justify-between py-3 border-b border-white/10">
+                  <span className="text-white/60">Design Position</span>
+                  <span className="text-white font-medium">X: {designPosition.x}%, Y: {designPosition.y}%</span>
+                </div>
+                <div className="flex justify-between py-3 border-b border-white/10">
+                  <span className="text-white/60">Design Size</span>
+                  <span className="text-white font-medium">{designScale}%</span>
                 </div>
                 {message && (
                   <div className="py-3">
