@@ -65,9 +65,10 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     }
 
     setIsSubmitting(true);
+    let orderId = null;
 
+    // Try to save reservation to database
     try {
-      // Save reservation to database first
       const response = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,28 +84,28 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       });
 
       const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.error || "Failed to save reservation");
-
-      // Now open WhatsApp with the order details
-      const message = encodeURIComponent(
-        `🛒 Product Reservation\n\n` +
-        `📋 Order ID: ${data.id.slice(-8).toUpperCase()}\n\n` +
-        `📦 Product: ${product.name}\n` +
-        `💰 Price: ₹${product.price}\n` +
-        `📏 Size: ${selectedSize}\n\n` +
-        `👤 Name: ${customerName}\n` +
-        `📱 Phone: ${customerPhone}\n` +
-        `${product.isCustomizable && uploadedDesign ? `🎨 Custom Design: Position ${designPosition.x}%, ${designPosition.y}%, Size ${designScale}%\n` : ""}\n\n` +
-        `Please confirm availability and pickup time.`
-      );
-      window.open(`https://wa.me/919136598457?text=${message}`, "_blank");
+      if (response.ok) {
+        orderId = data.id.slice(-8).toUpperCase();
+      }
     } catch (error) {
-      console.error("Error submitting reservation:", error);
-      alert("Failed to submit reservation. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+      console.error("Could not save to database:", error);
+      // Continue anyway - WhatsApp message will still work
     }
+
+    // Open WhatsApp regardless of DB success
+    const message = encodeURIComponent(
+      `${orderId ? `📋 Order ID: ${orderId}\n\n` : ""}` +
+      `🛒 Product Reservation\n\n` +
+      `📦 Product: ${product.name}\n` +
+      `💰 Price: ₹${product.price}\n` +
+      `📏 Size: ${selectedSize}\n\n` +
+      `👤 Name: ${customerName}\n` +
+      `📱 Phone: ${customerPhone}\n` +
+      `${product.isCustomizable && uploadedDesign ? `🎨 Custom Design: Position ${designPosition.x}%, ${designPosition.y}%, Size ${designScale}%\n` : ""}\n\n` +
+      `Please confirm availability and pickup time.`
+    );
+    window.open(`https://wa.me/919136598457?text=${message}`, "_blank");
+    setIsSubmitting(false);
   };
 
   const resetDesignPosition = () => {

@@ -92,9 +92,10 @@ export default function CustomPage() {
     }
 
     setIsSubmitting(true);
+    let orderId = null;
 
+    // Try to save to database
     try {
-      // Save custom design request to database
       const response = await fetch("/api/custom-designs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -110,30 +111,29 @@ export default function CustomPage() {
       });
 
       const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.error || "Failed to save request");
-
-      setSubmittedId(data.id);
-
-      // Now open WhatsApp with the request details
-      const text = encodeURIComponent(
-        `🎨 Custom Design Request\n\n` +
-        `📋 Order ID: ${data.id.slice(-8).toUpperCase()}\n\n` +
-        `👤 Name: ${name}\n` +
-        `📱 Phone: ${phone}\n` +
-        `${email ? `📧 Email: ${email}\n` : ""}` +
-        `${message ? `💬 Message: ${message}\n` : ""}` +
-        `📎 File: ${fileName || file?.name || "See attached"}\n` +
-        `🎯 Design Position: ${designPosition.x}% horizontal, ${designPosition.y}% vertical\n` +
-        `📐 Design Scale: ${designScale}%`
-      );
-      window.open(`https://wa.me/919136598457?text=${text}`, "_blank");
+      if (response.ok) {
+        orderId = data.id.slice(-8).toUpperCase();
+        setSubmittedId(data.id);
+      }
     } catch (error) {
-      console.error("Error submitting design:", error);
-      alert("Failed to submit your design. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+      console.error("Could not save to database:", error);
+      // Continue anyway - WhatsApp message will still work
     }
+
+    // Open WhatsApp regardless of DB success
+    const text = encodeURIComponent(
+      `${orderId ? `📋 Order ID: ${orderId}\n\n` : ""}` +
+      `🎨 Custom Design Request\n\n` +
+      `👤 Name: ${name}\n` +
+      `📱 Phone: ${phone}\n` +
+      `${email ? `📧 Email: ${email}\n` : ""}` +
+      `${message ? `💬 Message: ${message}\n` : ""}` +
+      `📎 File: ${fileName || file?.name || "See attached"}\n` +
+      `🎯 Design Position: ${designPosition.x}% horizontal, ${designPosition.y}% vertical\n` +
+      `📐 Design Scale: ${designScale}%`
+    );
+    window.open(`https://wa.me/919136598457?text=${text}`, "_blank");
+    setIsSubmitting(false);
   };
 
   return (
