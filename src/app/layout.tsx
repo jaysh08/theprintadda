@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PrintAdda | Custom T-Shirt Printing",
+  title: "PrintAdda | Print Your Style - Custom T-Shirt Printing",
   description: "Express yourself with custom printed t-shirts. Local pickup, WhatsApp reservations, and unique designs.",
   keywords: ["custom t-shirts", "t-shirt printing", "streetwear", "custom prints", "local pickup"],
 };

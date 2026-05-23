@@ -13,7 +13,8 @@ import {
   Trash2,
   X,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  MessageCircle
 } from "lucide-react";
 
 type Tab = "dashboard" | "categories" | "products" | "designs";
@@ -539,39 +540,262 @@ function ProductsContent() {
 }
 
 function DesignsContent() {
-  const [designs] = useState([
-    { id: "1", name: "Rahul S.", phone: "+91 98765 43210", status: "pending", createdAt: "2024-01-15" },
+  type DesignRequest = {
+    id: string;
+    name: string;
+    phone: string;
+    email?: string;
+    message?: string;
+    fileName?: string;
+    designPosition?: string;
+    designScale?: string;
+    status: "pending" | "confirmed" | "completed" | "cancelled";
+    createdAt: string;
+    notes?: string;
+  };
+
+  const [designs, setDesigns] = useState<DesignRequest[]>([
+    { id: "1", name: "Rahul S.", phone: "+91 98765 43210", email: "rahul@email.com", status: "pending", createdAt: "2024-01-15", fileName: "my-design.png", designPosition: "50%,40%", designScale: "100%" },
     { id: "2", name: "Priya M.", phone: "+91 87654 32109", status: "confirmed", createdAt: "2024-01-14" },
-    { id: "3", name: "Amit K.", phone: "+91 76543 21098", status: "pending", createdAt: "2024-01-13" },
+    { id: "3", name: "Amit K.", phone: "+91 76543 21098", message: "Need this by weekend", status: "pending", createdAt: "2024-01-13" },
   ]);
+  
+  const [selectedDesign, setSelectedDesign] = useState<DesignRequest | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  const handleStatusChange = (id: string, newStatus: DesignRequest["status"]) => {
+    setDesigns(designs.map(d => d.id === id ? { ...d, status: newStatus } : d));
+    if (selectedDesign?.id === id) {
+      setSelectedDesign({ ...selectedDesign, status: newStatus });
+    }
+  };
+
+  const handleViewDetails = (design: DesignRequest) => {
+    setSelectedDesign(design);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Delete this design request?")) {
+      setDesigns(designs.filter(d => d.id !== id));
+    }
+  };
+
+  const filteredDesigns = filterStatus === "all" 
+    ? designs 
+    : designs.filter(d => d.status === filterStatus);
+
+  const statusCounts = {
+    all: designs.length,
+    pending: designs.filter(d => d.status === "pending").length,
+    confirmed: designs.filter(d => d.status === "confirmed").length,
+    completed: designs.filter(d => d.status === "completed").length,
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display text-2xl text-white">Custom Design Requests</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-white/60 text-sm">{designs.length} total requests</span>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {designs.map((design) => (
-          <div key={design.id} className="glass rounded-xl p-6 flex items-center justify-between">
-            <div>
-              <h3 className="font-display text-xl text-white">{design.name}</h3>
-              <p className="text-white/50 text-sm">{design.phone}</p>
-              <p className="text-white/30 text-xs mt-1">{design.createdAt}</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                design.status === "pending" ? "bg-neon-yellow/20 text-neon-yellow" : "bg-neon-green/20 text-neon-green"
-              }`}>
-                {design.status}
-              </span>
-              <button className="px-4 py-2 bg-neon-cyan text-dark-900 font-medium rounded-lg hover:bg-neon-cyan/80 transition-colors">
-                View Details
-              </button>
-            </div>
-          </div>
+      {/* Filter Tabs */}
+      <div className="flex gap-2 mb-6">
+        {[
+          { id: "all", label: "All", count: statusCounts.all },
+          { id: "pending", label: "Pending", count: statusCounts.pending },
+          { id: "confirmed", label: "Confirmed", count: statusCounts.confirmed },
+          { id: "completed", label: "Completed", count: statusCounts.completed },
+        ].map((filter) => (
+          <button
+            key={filter.id}
+            onClick={() => setFilterStatus(filter.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              filterStatus === filter.id
+                ? "bg-neon-cyan text-dark-900"
+                : "bg-dark-700 text-white/60 hover:text-white"
+            }`}
+          >
+            {filter.label} ({filter.count})
+          </button>
         ))}
       </div>
+
+      {/* Designs List */}
+      <div className="space-y-4">
+        {filteredDesigns.length === 0 ? (
+          <div className="glass rounded-xl p-8 text-center">
+            <p className="text-white/40">No design requests found</p>
+          </div>
+        ) : (
+          filteredDesigns.map((design) => (
+            <div key={design.id} className="glass rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-display text-xl text-white">{design.name}</h3>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                      design.status === "pending" ? "bg-neon-yellow/20 text-neon-yellow" :
+                      design.status === "confirmed" ? "bg-neon-cyan/20 text-neon-cyan" :
+                      design.status === "completed" ? "bg-neon-green/20 text-neon-green" :
+                      "bg-red-500/20 text-red-400"
+                    }`}>
+                      {design.status}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/50">
+                    <span>📱 {design.phone}</span>
+                    {design.email && <span>📧 {design.email}</span>}
+                    {design.fileName && <span>📎 {design.fileName}</span>}
+                  </div>
+                  {design.message && (
+                    <p className="text-white/30 text-sm mt-2 italic">"{design.message}"</p>
+                  )}
+                  <p className="text-white/20 text-xs mt-2">Received: {design.createdAt}</p>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Quick Status Actions */}
+                  {design.status === "pending" && (
+                    <button
+                      onClick={() => handleStatusChange(design.id, "confirmed")}
+                      className="px-3 py-1.5 bg-neon-cyan/20 text-neon-cyan text-sm rounded-lg hover:bg-neon-cyan/30 transition-colors"
+                    >
+                      Confirm
+                    </button>
+                  )}
+                  {design.status === "confirmed" && (
+                    <button
+                      onClick={() => handleStatusChange(design.id, "completed")}
+                      className="px-3 py-1.5 bg-neon-green/20 text-neon-green text-sm rounded-lg hover:bg-neon-green/30 transition-colors"
+                    >
+                      Complete
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => handleViewDetails(design)}
+                    className="px-4 py-2 bg-dark-600 text-white/80 text-sm rounded-lg hover:bg-dark-500 transition-colors"
+                  >
+                    View Details
+                  </button>
+                  
+                  <button
+                    onClick={() => handleDelete(design.id)}
+                    className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Design Details Modal */}
+      {showModal && selectedDesign && (
+        <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass rounded-2xl p-8 w-full max-w-lg"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-2xl text-white">Request Details</h3>
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-dark-600 rounded-lg">
+                <X className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-white/40 text-sm">Customer Name</label>
+                  <p className="text-white font-medium">{selectedDesign.name}</p>
+                </div>
+                <div>
+                  <label className="text-white/40 text-sm">Phone</label>
+                  <p className="text-white font-medium">{selectedDesign.phone}</p>
+                </div>
+                {selectedDesign.email && (
+                  <div>
+                    <label className="text-white/40 text-sm">Email</label>
+                    <p className="text-white font-medium">{selectedDesign.email}</p>
+                  </div>
+                )}
+                {selectedDesign.fileName && (
+                  <div>
+                    <label className="text-white/40 text-sm">File</label>
+                    <p className="text-white font-medium">{selectedDesign.fileName}</p>
+                  </div>
+                )}
+                {selectedDesign.designPosition && (
+                  <div>
+                    <label className="text-white/40 text-sm">Design Position</label>
+                    <p className="text-white font-medium">{selectedDesign.designPosition}</p>
+                  </div>
+                )}
+                {selectedDesign.designScale && (
+                  <div>
+                    <label className="text-white/40 text-sm">Design Scale</label>
+                    <p className="text-white font-medium">{selectedDesign.designScale}</p>
+                  </div>
+                )}
+              </div>
+              
+              {selectedDesign.message && (
+                <div>
+                  <label className="text-white/40 text-sm">Message</label>
+                  <p className="text-white">{selectedDesign.message}</p>
+                </div>
+              )}
+              
+              <div>
+                <label className="text-white/40 text-sm">Status</label>
+                <select
+                  value={selectedDesign.status}
+                  onChange={(e) => handleStatusChange(selectedDesign.id, e.target.value as DesignRequest["status"])}
+                  className="w-full input-glow rounded-xl text-white bg-dark-800 mt-1"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-white/40 text-sm">Admin Notes</label>
+                <textarea
+                  value={selectedDesign.notes || ""}
+                  onChange={(e) => setSelectedDesign({ ...selectedDesign, notes: e.target.value })}
+                  placeholder="Add notes about this request..."
+                  className="w-full input-glow rounded-xl text-white h-24 resize-none mt-1"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mt-6">
+              <a
+                href={`https://wa.me/${selectedDesign.phone.replace(/[^0-9]/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 btn-primary flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-5 h-5" />
+                WhatsApp Customer
+              </a>
+              <button onClick={() => setShowModal(false)} className="flex-1 btn-secondary">
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }
