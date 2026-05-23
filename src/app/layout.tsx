@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${bebasNeue.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-body noise-overlay`}>
+      <body className={`${bebasNeue.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} font-body`}>
         <Navbar />
         <main className="min-h-screen pt-20">
           {children}

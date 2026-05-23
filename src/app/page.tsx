@@ -42,9 +42,6 @@ export default async function HomePage() {
 
   return (
     <div className="relative">
-      {/* Grain Effect Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-50 grain opacity-30" />
-      
       <Hero />
       
       {/* Categories Section */}
