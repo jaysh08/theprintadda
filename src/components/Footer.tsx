@@ -92,7 +92,7 @@ export default function Footer() {
               WhatsApp
             </a>
             <a
-              href="https://instagram.com/printadda"
+              href="https://instagram.com/theprintadda2k26"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2.5 rounded-full bg-dark-600 border border-white/10 text-white/60 hover:border-neon-pink hover:text-neon-pink transition-all duration-300"

@@ -271,15 +271,49 @@ function CategoriesContent() {
 }
 
 function ProductsContent() {
-  const [products, setProducts] = useState([
-    { id: "1", name: "NEON DREAMS", slug: "neon-dreams", price: 599, categoryId: "1", isCustomizable: false, isFeatured: true, stock: 10 },
-    { id: "2", name: "URBAN ABSTRACT", slug: "urban-abstract", price: 699, categoryId: "2", isCustomizable: true, isFeatured: true, stock: 8 },
-    { id: "3", name: "STREET KING", slug: "street-king", price: 799, categoryId: "1", isCustomizable: false, isFeatured: true, stock: 12 },
-    { id: "4", name: "CYBER PULSE", slug: "cyber-pulse", price: 649, categoryId: "3", isCustomizable: true, isFeatured: true, stock: 15 },
+  type Product = {
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    categoryId: string;
+    isCustomizable: boolean;
+    isFeatured: boolean;
+    stock: number;
+    plainImage: string | null;
+    printImage: string | null;
+    description: string;
+  };
+
+  type ProductForm = Omit<Product, 'id'>;
+
+  const [products, setProducts] = useState<Product[]>([
+    { id: "1", name: "NEON DREAMS", slug: "neon-dreams", price: 599, categoryId: "1", isCustomizable: false, isFeatured: true, stock: 10, plainImage: null, printImage: null, description: "" },
+    { id: "2", name: "URBAN ABSTRACT", slug: "urban-abstract", price: 699, categoryId: "2", isCustomizable: true, isFeatured: true, stock: 8, plainImage: null, printImage: null, description: "" },
+    { id: "3", name: "STREET KING", slug: "street-king", price: 799, categoryId: "1", isCustomizable: false, isFeatured: true, stock: 12, plainImage: null, printImage: null, description: "" },
+    { id: "4", name: "CYBER PULSE", slug: "cyber-pulse", price: 649, categoryId: "3", isCustomizable: true, isFeatured: true, stock: 15, plainImage: null, printImage: null, description: "" },
   ]);
   const [showModal, setShowModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<typeof products[0] | null>(null);
-  const [formData, setFormData] = useState({ name: "", slug: "", price: 0, categoryId: "1", isCustomizable: false, isFeatured: false });
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState<ProductForm>({
+    name: "", 
+    slug: "", 
+    price: 0, 
+    categoryId: "1", 
+    isCustomizable: false, 
+    isFeatured: false,
+    stock: 0,
+    plainImage: null,
+    printImage: null,
+    description: ""
+  });
+
+  const categories = [
+    { id: "1", name: "Streetwear" },
+    { id: "2", name: "Abstract" },
+    { id: "3", name: "Typography" },
+    { id: "4", name: "Minimalist" },
+  ];
 
   const handleDelete = (id: string) => {
     if (confirm("Delete this product?")) {
@@ -287,12 +321,41 @@ function ProductsContent() {
     }
   };
 
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      categoryId: product.categoryId,
+      isCustomizable: product.isCustomizable,
+      isFeatured: product.isFeatured,
+      stock: product.stock,
+      plainImage: product.plainImage,
+      printImage: product.printImage,
+      description: product.description
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingProduct) {
+      setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, ...formData } : p));
+    } else {
+      setProducts([...products, { id: Date.now().toString(), ...formData }]);
+    }
+    setShowModal(false);
+    setEditingProduct(null);
+    setFormData({ name: "", slug: "", price: 0, categoryId: "1", isCustomizable: false, isFeatured: false, stock: 0, plainImage: null, printImage: null, description: "" });
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display text-2xl text-white">Products</h2>
         <button
-          onClick={() => { setEditingProduct(null); setFormData({ name: "", slug: "", price: 0, categoryId: "1", isCustomizable: false, isFeatured: false }); setShowModal(true); }}
+          onClick={() => { setEditingProduct(null); setFormData({ name: "", slug: "", price: 0, categoryId: "1", isCustomizable: false, isFeatured: false, stock: 0, plainImage: null, printImage: null, description: "" }); setShowModal(true); }}
           className="btn-primary flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
@@ -306,6 +369,7 @@ function ProductsContent() {
             <tr className="text-left text-white/60 border-b border-white/10">
               <th className="pb-4 font-medium">Name</th>
               <th className="pb-4 font-medium">Price</th>
+              <th className="pb-4 font-medium">Category</th>
               <th className="pb-4 font-medium">Custom</th>
               <th className="pb-4 font-medium">Featured</th>
               <th className="pb-4 font-medium">Stock</th>
@@ -317,6 +381,7 @@ function ProductsContent() {
               <tr key={product.id} className="border-b border-white/5">
                 <td className="py-4 text-white font-medium">{product.name}</td>
                 <td className="py-4 text-neon-pink">₹{product.price}</td>
+                <td className="py-4 text-white/60">{categories.find(c => c.id === product.categoryId)?.name || "N/A"}</td>
                 <td className="py-4">
                   {product.isCustomizable ? <CheckCircle className="w-5 h-5 text-neon-green" /> : <AlertCircle className="w-5 h-5 text-white/20" />}
                 </td>
@@ -326,6 +391,9 @@ function ProductsContent() {
                 <td className="py-4 text-white/60">{product.stock}</td>
                 <td className="py-4">
                   <div className="flex gap-2">
+                    <button onClick={() => handleEdit(product)} className="p-2 hover:bg-dark-600 rounded-lg transition-colors">
+                      <Edit2 className="w-5 h-5 text-white/60" />
+                    </button>
                     <button onClick={() => handleDelete(product.id)} className="p-2 hover:bg-red-500/20 rounded-lg transition-colors">
                       <Trash2 className="w-5 h-5 text-red-400" />
                     </button>
@@ -336,6 +404,136 @@ function ProductsContent() {
           </tbody>
         </table>
       </div>
+
+      {/* Product Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass rounded-2xl p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-2xl text-white">{editingProduct ? "Edit" : "Add"} Product</h3>
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-dark-600 rounded-lg">
+                <X className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-white/60 text-sm mb-2">Product Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full input-glow rounded-xl text-white"
+                  placeholder="e.g. NEON DREAMS"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-2">Slug</label>
+                <input
+                  type="text"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
+                  className="w-full input-glow rounded-xl text-white"
+                  placeholder="neon-dreams"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-white/60 text-sm mb-2">Price (₹) *</label>
+                  <input
+                    type="number"
+                    value={formData.price || ""}
+                    onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
+                    className="w-full input-glow rounded-xl text-white"
+                    placeholder="599"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-white/60 text-sm mb-2">Stock</label>
+                  <input
+                    type="number"
+                    value={formData.stock || ""}
+                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                    className="w-full input-glow rounded-xl text-white"
+                    placeholder="10"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-2">Category *</label>
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                  className="w-full input-glow rounded-xl text-white bg-dark-800"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-2">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full input-glow rounded-xl text-white h-20 resize-none"
+                  placeholder="Product description..."
+                />
+              </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-2">Plain T-Shirt Image URL</label>
+                <input
+                  type="text"
+                  value={formData.plainImage || ""}
+                  onChange={(e) => setFormData({ ...formData, plainImage: e.target.value || null })}
+                  className="w-full input-glow rounded-xl text-white"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-2">Print Design Image URL</label>
+                <input
+                  type="text"
+                  value={formData.printImage || ""}
+                  onChange={(e) => setFormData({ ...formData, printImage: e.target.value || null })}
+                  className="w-full input-glow rounded-xl text-white"
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isCustomizable}
+                    onChange={(e) => setFormData({ ...formData, isCustomizable: e.target.checked })}
+                    className="w-5 h-5 accent-neon-cyan"
+                  />
+                  <span className="text-white">Allow Custom Design Upload</span>
+                </label>
+              </div>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isFeatured}
+                    onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                    className="w-5 h-5 accent-neon-yellow"
+                  />
+                  <span className="text-white">Show on Homepage (Featured)</span>
+                </label>
+              </div>
+              <button type="submit" className="w-full btn-primary">
+                {editingProduct ? "Update" : "Create"} Product
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }

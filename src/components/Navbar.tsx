@@ -62,7 +62,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <a
-                href="https://instagram.com/printadda"
+                href="https://instagram.com/theprintadda2k26"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-full border border-white/20 hover:border-neon-pink hover:bg-neon-pink/10 transition-all duration-300"
@@ -115,7 +115,7 @@ export default function Navbar() {
                 </motion.div>
               ))}
               <motion.a
-                href="https://instagram.com/printadda"
+                href="https://instagram.com/theprintadda2k26"
                 target="_blank"
                 rel="noopener noreferrer"
                 initial={{ opacity: 0, y: 20 }}
