@@ -14,10 +14,12 @@ import {
   X,
   CheckCircle,
   AlertCircle,
-  MessageCircle
+  MessageCircle,
+  ShoppingCart,
+  FileText
 } from "lucide-react";
 
-type Tab = "dashboard" | "categories" | "products" | "designs";
+type Tab = "dashboard" | "categories" | "products" | "designs" | "orders";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
@@ -92,6 +94,7 @@ export default function AdminPage() {
             { id: "categories", icon: Package, label: "Categories" },
             { id: "products", icon: Image, label: "Products" },
             { id: "designs", icon: Users, label: "Designs" },
+            { id: "orders", icon: FileText, label: "Orders" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -116,6 +119,7 @@ export default function AdminPage() {
           {activeTab === "categories" && <CategoriesContent />}
           {activeTab === "products" && <ProductsContent />}
           {activeTab === "designs" && <DesignsContent />}
+          {activeTab === "orders" && <OrdersContent />}
         </div>
       </section>
     </div>
@@ -856,6 +860,343 @@ function DesignsContent() {
             <div className="flex gap-4 mt-6">
               <a
                 href={`https://wa.me/${selectedDesign.phone.replace(/[^0-9]/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 btn-primary flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-5 h-5" />
+                WhatsApp Customer
+              </a>
+              <button onClick={() => setShowModal(false)} className="flex-1 btn-secondary">
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function OrdersContent() {
+  type OrderType = {
+    id: string;
+    type: "custom_design" | "product_reservation";
+    name: string;
+    phone: string;
+    email?: string;
+    product?: string;
+    designName?: string;
+    message?: string;
+    status: "pending" | "confirmed" | "completed" | "cancelled";
+    createdAt: string;
+    amount?: number;
+  };
+
+  const [orders, setOrders] = useState<OrderType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch("/api/custom-designs");
+      if (response.ok) {
+        const data = await response.json();
+        const convertedOrders: OrderType[] = data.map((d: any) => ({
+          id: d.id,
+          type: "custom_design" as const,
+          name: d.name,
+          phone: d.phone,
+          email: d.email || undefined,
+          designName: d.designName || d.image,
+          message: d.message || undefined,
+          status: d.status,
+          createdAt: new Date(d.createdAt).toLocaleString(),
+        }));
+        setOrders(convertedOrders);
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: OrderType["status"]) => {
+    try {
+      const response = await fetch(`/api/custom-designs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (response.ok) {
+        setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+        if (selectedOrder?.id === id) {
+          setSelectedOrder({ ...selectedOrder, status: newStatus });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("Failed to update status");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Delete this order?")) {
+      try {
+        const response = await fetch(`/api/custom-designs/${id}`, {
+          method: "DELETE",
+        });
+        
+        if (response.ok) {
+          setOrders(orders.filter(o => o.id !== id));
+        }
+      } catch (error) {
+        console.error("Error deleting order:", error);
+      }
+    }
+  };
+
+  const viewDetails = (order: OrderType) => {
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
+
+  const filteredOrders = orders.filter(o => {
+    const statusMatch = filterStatus === "all" || o.status === filterStatus;
+    const typeMatch = filterType === "all" || o.type === filterType;
+    return statusMatch && typeMatch;
+  });
+
+  const statusCounts = {
+    all: orders.length,
+    pending: orders.filter(o => o.status === "pending").length,
+    confirmed: orders.filter(o => o.status === "confirmed").length,
+    completed: orders.filter(o => o.status === "completed").length,
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-display text-2xl text-white">All Orders</h2>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={fetchOrders}
+            className="px-4 py-2 bg-dark-700 text-white/60 text-sm rounded-lg hover:text-white transition-colors"
+          >
+            Refresh
+          </button>
+          <span className="text-white/60 text-sm">{orders.length} total orders</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="glass rounded-xl p-4">
+          <p className="text-white/40 text-sm">Total Orders</p>
+          <p className="font-display text-2xl text-white">{statusCounts.all}</p>
+        </div>
+        <div className="glass rounded-xl p-4">
+          <p className="text-white/40 text-sm">Pending</p>
+          <p className="font-display text-2xl text-neon-yellow">{statusCounts.pending}</p>
+        </div>
+        <div className="glass rounded-xl p-4">
+          <p className="text-white/40 text-sm">Confirmed</p>
+          <p className="font-display text-2xl text-neon-cyan">{statusCounts.confirmed}</p>
+        </div>
+        <div className="glass rounded-xl p-4">
+          <p className="text-white/40 text-sm">Completed</p>
+          <p className="font-display text-2xl text-neon-green">{statusCounts.completed}</p>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="glass rounded-xl p-8 text-center">
+          <p className="text-white/60">Loading orders...</p>
+        </div>
+      )}
+
+      {!loading && orders.length === 0 && (
+        <div className="glass rounded-xl p-8 text-center">
+          <p className="text-white/60">No orders found</p>
+          <p className="text-white/30 text-sm mt-2">Orders will appear here when customers place them</p>
+        </div>
+      )}
+
+      {!loading && orders.length > 0 && (
+        <>
+          <div className="flex flex-wrap gap-4 mb-6">
+            <div className="flex gap-2">
+              <span className="text-white/40 text-sm self-center">Status:</span>
+              {["all", "pending", "confirmed", "completed"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={`px-3 py-1.5 rounded-lg text-sm ${
+                    filterStatus === s ? "bg-neon-cyan text-dark-900" : "bg-dark-700 text-white/60"
+                  }`}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {filteredOrders.map((order) => (
+              <div key={order.id} className="glass rounded-xl p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-3 mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                        order.type === "custom_design" ? "bg-neon-purple/20 text-neon-purple" : "bg-neon-pink/20 text-neon-pink"
+                      }`}>
+                        {order.type === "custom_design" ? "Custom Design" : "Reservation"}
+                      </span>
+                      <h3 className="font-display text-lg text-white">{order.name}</h3>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                        order.status === "pending" ? "bg-neon-yellow/20 text-neon-yellow" :
+                        order.status === "confirmed" ? "bg-neon-cyan/20 text-neon-cyan" :
+                        order.status === "completed" ? "bg-neon-green/20 text-neon-green" :
+                        "bg-red-500/20 text-red-400"
+                      }`}>
+                        {order.status}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/50">
+                      <span>📱 {order.phone}</span>
+                      {order.email && <span>📧 {order.email}</span>}
+                      {order.designName && <span>📎 {order.designName}</span>}
+                    </div>
+                    {order.message && (
+                      <p className="text-white/30 text-sm mt-2 line-clamp-1">"{order.message}"</p>
+                    )}
+                    <p className="text-white/20 text-xs mt-2">
+                      Order ID: {order.id.slice(-8).toUpperCase()} • {order.createdAt}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {order.status === "pending" && (
+                      <button
+                        onClick={() => handleStatusChange(order.id, "confirmed")}
+                        className="px-3 py-1.5 bg-neon-cyan/20 text-neon-cyan text-sm rounded-lg hover:bg-neon-cyan/30"
+                      >
+                        Confirm
+                      </button>
+                    )}
+                    {order.status === "confirmed" && (
+                      <button
+                        onClick={() => handleStatusChange(order.id, "completed")}
+                        className="px-3 py-1.5 bg-neon-green/20 text-neon-green text-sm rounded-lg hover:bg-neon-green/30"
+                      >
+                        Complete
+                      </button>
+                    )}
+                    <button
+                      onClick={() => viewDetails(order)}
+                      className="px-4 py-2 bg-dark-600 text-white/80 text-sm rounded-lg hover:bg-dark-500"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => handleDelete(order.id)}
+                      className="p-2 hover:bg-red-500/20 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {showModal && selectedOrder && (
+        <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass rounded-2xl p-8 w-full max-w-lg"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-2xl text-white">Order Details</h3>
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-dark-600 rounded-lg">
+                <X className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
+                  selectedOrder.type === "custom_design" ? "bg-neon-purple/20 text-neon-purple" : "bg-neon-pink/20 text-neon-pink"
+                }`}>
+                  {selectedOrder.type === "custom_design" ? "Custom Design" : "Reservation"}
+                </span>
+                <span className="text-white/40 text-sm">#{selectedOrder.id.slice(-8).toUpperCase()}</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-white/40 text-sm">Customer Name</label>
+                  <p className="text-white font-medium">{selectedOrder.name}</p>
+                </div>
+                <div>
+                  <label className="text-white/40 text-sm">Phone</label>
+                  <p className="text-white font-medium">{selectedOrder.phone}</p>
+                </div>
+                {selectedOrder.email && (
+                  <div>
+                    <label className="text-white/40 text-sm">Email</label>
+                    <p className="text-white font-medium">{selectedOrder.email}</p>
+                  </div>
+                )}
+                {selectedOrder.designName && (
+                  <div>
+                    <label className="text-white/40 text-sm">Design</label>
+                    <p className="text-white font-medium">{selectedOrder.designName}</p>
+                  </div>
+                )}
+              </div>
+              
+              {selectedOrder.message && (
+                <div>
+                  <label className="text-white/40 text-sm">Message</label>
+                  <p className="text-white">{selectedOrder.message}</p>
+                </div>
+              )}
+              
+              <div>
+                <label className="text-white/40 text-sm">Status</label>
+                <select
+                  value={selectedOrder.status}
+                  onChange={(e) => handleStatusChange(selectedOrder.id, e.target.value as OrderType["status"])}
+                  className="w-full input-glow rounded-xl text-white bg-dark-800 mt-1"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-white/40 text-sm">Received</label>
+                <p className="text-white">{selectedOrder.createdAt}</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mt-6">
+              <a
+                href={`https://wa.me/${selectedOrder.phone.replace(/[^0-9]/g, "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 btn-primary flex items-center justify-center gap-2"
