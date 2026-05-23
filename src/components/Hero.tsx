@@ -33,12 +33,10 @@ export default function Hero() {
       <motion.div
         style={{ y: useTransform(scrollYProgress, [0, 1], [0, 150]) }}
         className="absolute top-40 right-[15%] w-20 h-20 bg-neon-pink/20 rounded-lg rotate-12 animate-float"
-        style={{ animationDelay: "0.5s" }}
       />
       <motion.div
         style={{ y }}
         className="absolute bottom-40 left-[20%] w-24 h-24 border border-neon-purple/30 rotate-45 animate-float"
-        style={{ animationDelay: "1s" }}
       />
 
       {/* Main Content */}

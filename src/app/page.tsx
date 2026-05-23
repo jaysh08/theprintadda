@@ -34,6 +34,12 @@ export default async function HomePage() {
   const categories = await getCategories();
   const featuredProducts = await getFeaturedProducts();
 
+  // Transform Prisma data to match component expectations
+  const transformedCategories = categories.map(c => ({
+    ...c,
+    productCount: c._count?.products || 0,
+  }));
+
   return (
     <div className="relative">
       {/* Grain Effect Overlay */}
@@ -42,7 +48,7 @@ export default async function HomePage() {
       <Hero />
       
       {/* Categories Section */}
-      <CategorySection categories={categories} />
+      <CategorySection categories={transformedCategories} />
       
       {/* Featured Products */}
       <FeaturedProducts products={featuredProducts} />

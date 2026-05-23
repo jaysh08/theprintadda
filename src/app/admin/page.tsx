@@ -176,7 +176,7 @@ function CategoriesContent() {
     if (editingCategory) {
       setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, ...formData } : c));
     } else {
-      setCategories([...categories, { id: Date.now().toString(), ...formData, order: categories.length + 1, _count: { products: 0 } }]);
+      setCategories([...categories, { id: Date.now().toString(), ...formData, image: null, order: categories.length + 1, _count: { products: 0 } }]);
     }
     setShowModal(false);
     setEditingCategory(null);
