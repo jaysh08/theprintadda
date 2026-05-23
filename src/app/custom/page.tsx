@@ -2,25 +2,29 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Image, File, X, CheckCircle, MessageCircle, Info, Move, ZoomIn, ZoomOut, RefreshCw, Shirt } from "lucide-react";
+import { Upload, Image, File, X, CheckCircle, MessageCircle, Info, Move, ZoomIn, ZoomOut, RefreshCw, Shirt, Crop, Type } from "lucide-react";
 
 type Step = "upload" | "details" | "confirm";
 
 export default function CustomPage() {
   const [step, setStep] = useState<Step>("upload");
   const [file, setFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [showCropTool, setShowCropTool] = useState(false);
+  const [cropArea, setCropArea] = useState({ x: 25, y: 25, width: 50, height: 50 });
   
   // Mockup controls
   const [showMockup, setShowMockup] = useState(true);
   const [designPosition, setDesignPosition] = useState({ x: 50, y: 40 });
   const [designScale, setDesignScale] = useState(100);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleFileSelect = (selectedFile: File) => {
     const validTypes = ["image/png", "image/jpeg", "application/pdf"];
@@ -33,12 +37,43 @@ export default function CustomPage() {
       return;
     }
     setFile(selectedFile);
+    setFileName(selectedFile.name.replace(/\.[^/.]+$/, "")); // Default name without extension
     
     if (selectedFile.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result as string);
       reader.readAsDataURL(selectedFile);
     }
+  };
+
+  const handleCrop = () => {
+    if (!preview || !canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    const img = new window.Image();
+    img.onload = () => {
+      canvas.width = img.width * (cropArea.width / 100);
+      canvas.height = img.height * (cropArea.height / 100);
+      
+      const sx = img.width * (cropArea.x / 100);
+      const sy = img.height * (cropArea.y / 100);
+      const sw = img.width * (cropArea.width / 100);
+      const sh = img.height * (cropArea.height / 100);
+      
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const croppedDataUrl = canvas.toDataURL("image/png");
+      setPreview(croppedDataUrl);
+      setShowCropTool(false);
+    };
+    img.src = preview;
+  };
+
+  const resetDesignPosition = () => {
+    setDesignPosition({ x: 50, y: 40 });
+    setDesignScale(100);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -55,16 +90,11 @@ export default function CustomPage() {
       `📱 Phone: ${phone}\n` +
       `${email ? `📧 Email: ${email}\n` : ""}` +
       `${message ? `💬 Message: ${message}\n` : ""}` +
-      `📎 File: ${file?.name || "See attached"}\n` +
+      `📎 File: ${fileName || file?.name || "See attached"}\n` +
       `🎯 Design Position: ${designPosition.x}% horizontal, ${designPosition.y}% vertical\n` +
       `📐 Design Scale: ${designScale}%`
     );
-    window.open(`https://wa.me/917039514368?text=${text}`, "_blank");
-  };
-
-  const resetDesignPosition = () => {
-    setDesignPosition({ x: 50, y: 40 });
-    setDesignScale(100);
+    window.open(`https://wa.me/919136598457?text=${text}`, "_blank");
   };
 
   return (
@@ -166,8 +196,33 @@ export default function CustomPage() {
                     </div>
                     <p className="text-white font-medium mb-1">{file.name}</p>
                     <p className="text-white/50 text-sm mb-4">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    
+                    {/* Image Rename Input */}
+                    <div className="w-full max-w-xs mb-4">
+                      <label className="text-white/50 text-xs mb-1 flex items-center gap-1">
+                        <Type className="w-3 h-3" />
+                        Rename your design
+                      </label>
+                      <input
+                        type="text"
+                        value={fileName}
+                        onChange={(e) => setFileName(e.target.value)}
+                        className="w-full input-glow rounded-lg text-white text-sm bg-dark-800"
+                        placeholder="Design name"
+                      />
+                    </div>
+                    
+                    {/* Crop Tool Button */}
                     <button
-                      onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); }}
+                      onClick={(e) => { e.stopPropagation(); setShowCropTool(true); }}
+                      className="mb-2 px-3 py-1.5 bg-neon-cyan/20 text-neon-cyan text-sm rounded-lg hover:bg-neon-cyan/30 transition-colors flex items-center gap-1"
+                    >
+                      <Crop className="w-4 h-4" />
+                      Crop Image
+                    </button>
+                    
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); setFileName(""); }}
                       className="text-red-400 hover:text-red-300 text-sm"
                     >
                       Remove file
@@ -311,6 +366,113 @@ export default function CustomPage() {
                       Reset Position
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Hidden canvas for cropping */}
+              <canvas ref={canvasRef} className="hidden" />
+
+              {/* Crop Tool Modal */}
+              {showCropTool && preview && (
+                <div className="fixed inset-0 bg-dark-900/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="glass rounded-2xl p-6 w-full max-w-lg"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-display text-xl text-white flex items-center gap-2">
+                        <Crop className="w-5 h-5 text-neon-cyan" />
+                        Crop Your Design
+                      </h3>
+                      <button onClick={() => setShowCropTool(false)} className="p-2 hover:bg-dark-600 rounded-lg">
+                        <X className="w-5 h-5 text-white/60" />
+                      </button>
+                    </div>
+                    
+                    <p className="text-white/50 text-sm mb-4">Adjust the crop area to focus on the part you want to print.</p>
+                    
+                    {/* Preview with crop overlay */}
+                    <div className="relative mb-4 rounded-xl overflow-hidden bg-dark-700">
+                      <img src={preview} alt="Preview" className="w-full max-h-64 object-contain" />
+                      {/* Crop area indicator */}
+                      <div 
+                        className="absolute border-2 border-neon-cyan bg-neon-cyan/10"
+                        style={{
+                          left: `${cropArea.x}%`,
+                          top: `${cropArea.y}%`,
+                          width: `${cropArea.width}%`,
+                          height: `${cropArea.height}%`,
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Crop controls */}
+                    <div className="space-y-4 mb-6">
+                      <div>
+                        <label className="text-white/60 text-xs mb-1 block">X Position ({cropArea.x}%)</label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="75"
+                          value={cropArea.x}
+                          onChange={(e) => setCropArea({ ...cropArea, x: parseInt(e.target.value) })}
+                          className="w-full accent-neon-cyan"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-white/60 text-xs mb-1 block">Y Position ({cropArea.y}%)</label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="75"
+                          value={cropArea.y}
+                          onChange={(e) => setCropArea({ ...cropArea, y: parseInt(e.target.value) })}
+                          className="w-full accent-neon-cyan"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-white/60 text-xs mb-1 block">Width ({cropArea.width}%)</label>
+                          <input
+                            type="range"
+                            min="25"
+                            max="100"
+                            value={cropArea.width}
+                            onChange={(e) => setCropArea({ ...cropArea, width: parseInt(e.target.value) })}
+                            className="w-full accent-neon-cyan"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-white/60 text-xs mb-1 block">Height ({cropArea.height}%)</label>
+                          <input
+                            type="range"
+                            min="25"
+                            max="100"
+                            value={cropArea.height}
+                            onChange={(e) => setCropArea({ ...cropArea, height: parseInt(e.target.value) })}
+                            className="w-full accent-neon-cyan"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-4">
+                      <button
+                        onClick={handleCrop}
+                        className="flex-1 btn-primary flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        Apply Crop
+                      </button>
+                      <button
+                        onClick={() => setShowCropTool(false)}
+                        className="flex-1 btn-secondary"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </motion.div>
                 </div>
               )}
 

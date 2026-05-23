@@ -63,7 +63,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       `${product.isCustomizable && uploadedDesign ? "🎨 Custom design attached (Position: " + designPosition.x + "%," + designPosition.y + "%, Size: " + designScale + "%)\n" : ""}\n\n` +
       `Please confirm availability.`
     );
-    window.open(`https://wa.me/917039514368?text=${message}`, "_blank");
+    window.open(`https://wa.me/919136598457?text=${message}`, "_blank");
   };
 
   const resetDesignPosition = () => {

@@ -189,7 +189,7 @@ export default function AboutPage() {
 
               <div className="flex flex-col items-center justify-center">
                 <a
-                  href="https://wa.me/917039514368"
+                  href="https://wa.me/919136598457"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-5 bg-neon-green text-dark-900 font-bold text-lg rounded-xl hover:bg-neon-green/90 transition-colors flex items-center justify-center gap-3 mb-4"

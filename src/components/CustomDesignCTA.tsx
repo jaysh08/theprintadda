@@ -124,7 +124,7 @@ export default function CustomDesignCTA() {
 
               {/* WhatsApp CTA */}
               <a
-                href="https://wa.me/917039514368?text=Hi! I want to print my custom design."
+                href="https://wa.me/919136598457?text=Hi! I want to print my custom design."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-6 w-full py-4 bg-neon-green text-dark-900 font-bold text-center rounded-xl hover:bg-neon-green/90 transition-colors flex items-center justify-center gap-2"
