@@ -50,3 +50,17 @@ model CustomDesign {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model Reservation {
+  id           String   @id @default(cuid())
+  productId    String
+  productName  String
+  price        Float
+  size         String
+  customerName String
+  customerPhone String
+  customDesign String?
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

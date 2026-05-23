@@ -891,6 +891,8 @@ function OrdersContent() {
     status: "pending" | "confirmed" | "completed" | "cancelled";
     createdAt: string;
     amount?: number;
+    size?: string;
+    customDesign?: string;
   };
 
   const [orders, setOrders] = useState<OrderType[]>([]);
@@ -906,22 +908,45 @@ function OrdersContent() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch("/api/custom-designs");
-      if (response.ok) {
-        const data = await response.json();
-        const convertedOrders: OrderType[] = data.map((d: any) => ({
-          id: d.id,
-          type: "custom_design" as const,
-          name: d.name,
-          phone: d.phone,
-          email: d.email || undefined,
-          designName: d.designName || d.image,
-          message: d.message || undefined,
-          status: d.status,
-          createdAt: new Date(d.createdAt).toLocaleString(),
-        }));
-        setOrders(convertedOrders);
-      }
+      // Fetch custom designs
+      const designsResponse = await fetch("/api/custom-designs");
+      const customDesigns = designsResponse.ok ? await designsResponse.json() : [];
+
+      // Fetch product reservations
+      const reservationsResponse = await fetch("/api/reservations");
+      const reservations = reservationsResponse.ok ? await reservationsResponse.json() : [];
+
+      // Convert custom designs to unified order format
+      const designOrders: OrderType[] = customDesigns.map((d: any) => ({
+        id: d.id,
+        type: "custom_design" as const,
+        name: d.name,
+        phone: d.phone,
+        email: d.email || undefined,
+        designName: d.designName || d.image,
+        message: d.message || undefined,
+        status: d.status,
+        createdAt: new Date(d.createdAt).toLocaleString(),
+      }));
+
+      // Convert reservations to unified order format
+      const reservationOrders: OrderType[] = reservations.map((r: any) => ({
+        id: r.id,
+        type: "product_reservation" as const,
+        name: r.customerName,
+        phone: r.customerPhone,
+        product: r.productName,
+        status: r.status,
+        createdAt: new Date(r.createdAt).toLocaleString(),
+        amount: r.price,
+        size: r.size,
+        customDesign: r.customDesign || undefined,
+      }));
+
+      // Combine and sort by date
+      setOrders([...designOrders, ...reservationOrders].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ));
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
@@ -929,9 +954,10 @@ function OrdersContent() {
     }
   };
 
-  const handleStatusChange = async (id: string, newStatus: OrderType["status"]) => {
+  const handleStatusChange = async (id: string, newStatus: OrderType["status"], orderType: string) => {
     try {
-      const response = await fetch(`/api/custom-designs/${id}`, {
+      const endpoint = orderType === "custom_design" ? "/api/custom-designs" : "/api/reservations";
+      const response = await fetch(`${endpoint}/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -949,10 +975,11 @@ function OrdersContent() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, orderType: string) => {
     if (confirm("Delete this order?")) {
       try {
-        const response = await fetch(`/api/custom-designs/${id}`, {
+        const endpoint = orderType === "custom_design" ? "/api/custom-designs" : "/api/reservations";
+        const response = await fetch(`${endpoint}/${id}`, {
           method: "DELETE",
         });
         
@@ -1086,7 +1113,7 @@ function OrdersContent() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {order.status === "pending" && (
                       <button
-                        onClick={() => handleStatusChange(order.id, "confirmed")}
+                        onClick={() => handleStatusChange(order.id, "confirmed", order.type)}
                         className="px-3 py-1.5 bg-neon-cyan/20 text-neon-cyan text-sm rounded-lg hover:bg-neon-cyan/30"
                       >
                         Confirm
@@ -1094,7 +1121,7 @@ function OrdersContent() {
                     )}
                     {order.status === "confirmed" && (
                       <button
-                        onClick={() => handleStatusChange(order.id, "completed")}
+                        onClick={() => handleStatusChange(order.id, "completed", order.type)}
                         className="px-3 py-1.5 bg-neon-green/20 text-neon-green text-sm rounded-lg hover:bg-neon-green/30"
                       >
                         Complete
@@ -1107,7 +1134,7 @@ function OrdersContent() {
                       View Details
                     </button>
                     <button
-                      onClick={() => handleDelete(order.id)}
+                      onClick={() => handleDelete(order.id, order.type)}
                       className="p-2 hover:bg-red-500/20 rounded-lg"
                     >
                       <Trash2 className="w-4 h-4 text-red-400" />
@@ -1178,7 +1205,7 @@ function OrdersContent() {
                 <label className="text-white/40 text-sm">Status</label>
                 <select
                   value={selectedOrder.status}
-                  onChange={(e) => handleStatusChange(selectedOrder.id, e.target.value as OrderType["status"])}
+                  onChange={(e) => handleStatusChange(selectedOrder.id, e.target.value as OrderType["status"], selectedOrder.type)}
                   className="w-full input-glow rounded-xl text-white bg-dark-800 mt-1"
                 >
                   <option value="pending">Pending</option>

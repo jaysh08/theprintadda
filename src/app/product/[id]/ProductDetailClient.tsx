@@ -19,7 +19,8 @@ import {
   ZoomIn,
   ZoomOut,
   RefreshCw,
-  Shirt
+  Shirt,
+  Loader2
 } from "lucide-react";
 
 interface Product {
@@ -51,19 +52,59 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const [uploadedDesign, setUploadedDesign] = useState<string | null>(null);
   const [designPosition, setDesignPosition] = useState({ x: 50, y: 40 });
   const [designScale, setDesignScale] = useState(100);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
-  const handleWhatsAppReserve = () => {
-    const message = encodeURIComponent(
-      `Hi! I want to reserve:\n\n` +
-      `📦 Product: ${product.name}\n` +
-      `💰 Price: ₹${product.price}\n` +
-      `📏 Size: ${selectedSize}\n` +
-      `${product.isCustomizable && uploadedDesign ? "🎨 Custom design attached (Position: " + designPosition.x + "%," + designPosition.y + "%, Size: " + designScale + "%)\n" : ""}\n\n` +
-      `Please confirm availability.`
-    );
-    window.open(`https://wa.me/919136598457?text=${message}`, "_blank");
+  const handleWhatsAppReserve = async () => {
+    if (!customerName || !customerPhone) {
+      alert("Please enter your name and phone number");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Save reservation to database first
+      const response = await fetch("/api/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          productName: product.name,
+          price: product.price,
+          size: selectedSize,
+          customerName,
+          customerPhone,
+          customDesign: uploadedDesign ? `Position: ${designPosition.x}%, ${designPosition.y}% | Scale: ${designScale}%` : null,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.error || "Failed to save reservation");
+
+      // Now open WhatsApp with the order details
+      const message = encodeURIComponent(
+        `🛒 Product Reservation\n\n` +
+        `📋 Order ID: ${data.id.slice(-8).toUpperCase()}\n\n` +
+        `📦 Product: ${product.name}\n` +
+        `💰 Price: ₹${product.price}\n` +
+        `📏 Size: ${selectedSize}\n\n` +
+        `👤 Name: ${customerName}\n` +
+        `📱 Phone: ${customerPhone}\n` +
+        `${product.isCustomizable && uploadedDesign ? `🎨 Custom Design: Position ${designPosition.x}%, ${designPosition.y}%, Size ${designScale}%\n` : ""}\n\n` +
+        `Please confirm availability and pickup time.`
+      );
+      window.open(`https://wa.me/919136598457?text=${message}`, "_blank");
+    } catch (error) {
+      console.error("Error submitting reservation:", error);
+      alert("Failed to submit reservation. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetDesignPosition = () => {
@@ -248,12 +289,46 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
               {/* CTA Buttons */}
               <div className="space-y-4 mb-8">
+                {/* Customer Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-white/60 text-sm mb-2">Your Name</label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Enter name"
+                      className="w-full px-4 py-3 bg-dark-700 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-neon-cyan focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/60 text-sm mb-2">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="+91 XXXXX XXXXX"
+                      className="w-full px-4 py-3 bg-dark-700 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-neon-cyan focus:outline-none"
+                    />
+                  </div>
+                </div>
+
                 <button
                   onClick={handleWhatsAppReserve}
-                  className="w-full py-4 bg-neon-green text-dark-900 font-bold text-lg rounded-xl hover:bg-neon-green/90 transition-colors flex items-center justify-center gap-3"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-neon-green text-dark-900 font-bold text-lg rounded-xl hover:bg-neon-green/90 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  <MessageCircle className="w-6 h-6" />
-                  Reserve on WhatsApp
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      Saving Order...
+                    </>
+                  ) : (
+                    <>
+                      <MessageCircle className="w-6 h-6" />
+                      Reserve on WhatsApp
+                    </>
+                  )}
                 </button>
                 
                 {product.isCustomizable && (
