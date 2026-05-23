@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Image, File, X, CheckCircle, MessageCircle, Info, Move, ZoomIn, ZoomOut, RefreshCw, Shirt, Crop, Type } from "lucide-react";
+import { Upload, Image, File, X, CheckCircle, MessageCircle, Info, Move, ZoomIn, ZoomOut, RefreshCw, Shirt, Crop, Type, Loader2 } from "lucide-react";
 
 type Step = "upload" | "details" | "confirm";
 
@@ -18,6 +18,8 @@ export default function CustomPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [showCropTool, setShowCropTool] = useState(false);
   const [cropArea, setCropArea] = useState({ x: 25, y: 25, width: 50, height: 50 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
   
   // Mockup controls
   const [showMockup, setShowMockup] = useState(true);
@@ -83,18 +85,55 @@ export default function CustomPage() {
     if (droppedFile) handleFileSelect(droppedFile);
   };
 
-  const handleSubmit = () => {
-    const text = encodeURIComponent(
-      `🎨 Custom Design Request\n\n` +
-      `👤 Name: ${name}\n` +
-      `📱 Phone: ${phone}\n` +
-      `${email ? `📧 Email: ${email}\n` : ""}` +
-      `${message ? `💬 Message: ${message}\n` : ""}` +
-      `📎 File: ${fileName || file?.name || "See attached"}\n` +
-      `🎯 Design Position: ${designPosition.x}% horizontal, ${designPosition.y}% vertical\n` +
-      `📐 Design Scale: ${designScale}%`
-    );
-    window.open(`https://wa.me/919136598457?text=${text}`, "_blank");
+  const handleSubmit = async () => {
+    if (!name || !phone) {
+      alert("Please fill in name and phone number");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Save custom design request to database
+      const response = await fetch("/api/custom-designs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          message,
+          designName: fileName || file?.name || "Unnamed Design",
+          designPosition: `${designPosition.x}% horizontal, ${designPosition.y}% vertical`,
+          designScale: `${designScale}%`,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.error || "Failed to save request");
+
+      setSubmittedId(data.id);
+
+      // Now open WhatsApp with the request details
+      const text = encodeURIComponent(
+        `🎨 Custom Design Request\n\n` +
+        `📋 Order ID: ${data.id.slice(-8).toUpperCase()}\n\n` +
+        `👤 Name: ${name}\n` +
+        `📱 Phone: ${phone}\n` +
+        `${email ? `📧 Email: ${email}\n` : ""}` +
+        `${message ? `💬 Message: ${message}\n` : ""}` +
+        `📎 File: ${fileName || file?.name || "See attached"}\n` +
+        `🎯 Design Position: ${designPosition.x}% horizontal, ${designPosition.y}% vertical\n` +
+        `📐 Design Scale: ${designScale}%`
+      );
+      window.open(`https://wa.me/919136598457?text=${text}`, "_blank");
+    } catch (error) {
+      console.error("Error submitting design:", error);
+      alert("Failed to submit your design. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

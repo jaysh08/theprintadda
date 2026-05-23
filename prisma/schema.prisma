@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model Category {
@@ -37,12 +37,16 @@ model Product {
 }
 
 model CustomDesign {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?
-  phone     String?
-  image     String
-  productId String?
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  name            String
+  email           String?
+  phone           String
+  message         String?
+  designName      String   @default("Unnamed Design")
+  designPosition  String?
+  designScale     String?
+  image           String   @default("")
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

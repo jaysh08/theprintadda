@@ -546,7 +546,7 @@ function DesignsContent() {
     phone: string;
     email?: string;
     message?: string;
-    fileName?: string;
+    designName?: string;
     designPosition?: string;
     designScale?: string;
     status: "pending" | "confirmed" | "completed" | "cancelled";
@@ -554,20 +554,59 @@ function DesignsContent() {
     notes?: string;
   };
 
-  const [designs, setDesigns] = useState<DesignRequest[]>([
-    { id: "1", name: "Rahul S.", phone: "+91 98765 43210", email: "rahul@email.com", status: "pending", createdAt: "2024-01-15", fileName: "my-design.png", designPosition: "50%,40%", designScale: "100%" },
-    { id: "2", name: "Priya M.", phone: "+91 87654 32109", status: "confirmed", createdAt: "2024-01-14" },
-    { id: "3", name: "Amit K.", phone: "+91 76543 21098", message: "Need this by weekend", status: "pending", createdAt: "2024-01-13" },
-  ]);
-  
+  const [designs, setDesigns] = useState<DesignRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedDesign, setSelectedDesign] = useState<DesignRequest | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const handleStatusChange = (id: string, newStatus: DesignRequest["status"]) => {
-    setDesigns(designs.map(d => d.id === id ? { ...d, status: newStatus } : d));
-    if (selectedDesign?.id === id) {
-      setSelectedDesign({ ...selectedDesign, status: newStatus });
+  // Fetch designs from API
+  useEffect(() => {
+    fetchDesigns();
+  }, []);
+
+  const fetchDesigns = async () => {
+    try {
+      const response = await fetch("/api/custom-designs");
+      if (response.ok) {
+        const data = await response.json();
+        setDesigns(data.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          phone: d.phone,
+          email: d.email || undefined,
+          message: d.message || undefined,
+          designName: d.designName || d.image,
+          designPosition: d.designPosition || undefined,
+          designScale: d.designScale || undefined,
+          status: d.status as DesignRequest["status"],
+          createdAt: new Date(d.createdAt).toLocaleString(),
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching designs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: DesignRequest["status"]) => {
+    try {
+      const response = await fetch(`/api/custom-designs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (response.ok) {
+        setDesigns(designs.map(d => d.id === id ? { ...d, status: newStatus } : d));
+        if (selectedDesign?.id === id) {
+          setSelectedDesign({ ...selectedDesign, status: newStatus });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("Failed to update status");
     }
   };
 
@@ -576,9 +615,19 @@ function DesignsContent() {
     setShowModal(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Delete this design request?")) {
-      setDesigns(designs.filter(d => d.id !== id));
+      try {
+        const response = await fetch(`/api/custom-designs/${id}`, {
+          method: "DELETE",
+        });
+        
+        if (response.ok) {
+          setDesigns(designs.filter(d => d.id !== id));
+        }
+      } catch (error) {
+        console.error("Error deleting design:", error);
+      }
     }
   };
 
@@ -597,32 +646,57 @@ function DesignsContent() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-display text-2xl text-white">Custom Design Requests</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={fetchDesigns}
+            className="px-4 py-2 bg-dark-700 text-white/60 text-sm rounded-lg hover:text-white transition-colors"
+          >
+            Refresh
+          </button>
           <span className="text-white/60 text-sm">{designs.length} total requests</span>
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="glass rounded-xl p-8 text-center">
+          <p className="text-white/60">Loading designs...</p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && designs.length === 0 && (
+        <div className="glass rounded-xl p-8 text-center">
+          <p className="text-white/60">No design requests found</p>
+          <p className="text-white/30 text-sm mt-2">Requests will appear here when customers submit them</p>
+        </div>
+      )}
+
       {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6">
-        {[
-          { id: "all", label: "All", count: statusCounts.all },
-          { id: "pending", label: "Pending", count: statusCounts.pending },
-          { id: "confirmed", label: "Confirmed", count: statusCounts.confirmed },
-          { id: "completed", label: "Completed", count: statusCounts.completed },
-        ].map((filter) => (
-          <button
-            key={filter.id}
-            onClick={() => setFilterStatus(filter.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filterStatus === filter.id
-                ? "bg-neon-cyan text-dark-900"
-                : "bg-dark-700 text-white/60 hover:text-white"
-            }`}
-          >
-            {filter.label} ({filter.count})
-          </button>
-        ))}
-      </div>
+      {!loading && designs.length > 0 && (
+        <>
+          <div className="flex gap-2 mb-6">
+            {[
+              { id: "all", label: "All", count: statusCounts.all },
+              { id: "pending", label: "Pending", count: statusCounts.pending },
+              { id: "confirmed", label: "Confirmed", count: statusCounts.confirmed },
+              { id: "completed", label: "Completed", count: statusCounts.completed },
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setFilterStatus(filter.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterStatus === filter.id
+                    ? "bg-neon-cyan text-dark-900"
+                    : "bg-dark-700 text-white/60 hover:text-white"
+                }`}
+              >
+                {filter.label} ({filter.count})
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Designs List */}
       <div className="space-y-4">
@@ -649,7 +723,7 @@ function DesignsContent() {
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/50">
                     <span>📱 {design.phone}</span>
                     {design.email && <span>📧 {design.email}</span>}
-                    {design.fileName && <span>📎 {design.fileName}</span>}
+                    {design.designName && <span>📎 {design.designName}</span>}
                   </div>
                   {design.message && (
                     <p className="text-white/30 text-sm mt-2 italic">"{design.message}"</p>
@@ -727,10 +801,10 @@ function DesignsContent() {
                     <p className="text-white font-medium">{selectedDesign.email}</p>
                   </div>
                 )}
-                {selectedDesign.fileName && (
+                {selectedDesign.designName && (
                   <div>
-                    <label className="text-white/40 text-sm">File</label>
-                    <p className="text-white font-medium">{selectedDesign.fileName}</p>
+                    <label className="text-white/40 text-sm">Design Name</label>
+                    <p className="text-white font-medium">{selectedDesign.designName}</p>
                   </div>
                 )}
                 {selectedDesign.designPosition && (
